@@ -198,24 +198,6 @@ class AcknowledgmentFormFrame(ttk.Frame):
         ttk.Separator(frame, orient="horizontal").grid(row=row, column=0, columnspan=6, sticky="ew", pady=10)
         row += 1
 
-        # Device Type
-        device_label = ttk.Label(frame, text="Device Type:", font=("Helvetica", 12, "bold"))
-        device_label.grid(row=row, column=0, columnspan=2, sticky="w", padx=5, pady=(10, 5))
-        row += 1
-
-        self.device_var = tk.StringVar(value="Office")
-        office_rb = ttk.Radiobutton(frame, text="Office Device", variable=self.device_var, value="Office")
-        office_rb.grid(row=row, column=0, columnspan=2, sticky="w", padx=20, pady=2)
-        row += 1
-
-        lab_rb = ttk.Radiobutton(frame, text="Lab Device", variable=self.device_var, value="Lab")
-        lab_rb.grid(row=row, column=0, columnspan=2, sticky="w", padx=20, pady=2)
-        row += 1
-
-        # Separator
-        ttk.Separator(frame, orient="horizontal").grid(row=row, column=0, columnspan=6, sticky="ew", pady=10)
-        row += 1
-
         # Generate button
         gen_btn = ttk.Button(frame, text="Generate PDF", command=self._generate_pdf,
                              style="Accent.TButton")
@@ -398,7 +380,6 @@ class AcknowledgmentFormFrame(ttk.Frame):
             "floor": self.floor_var.get(),
             "floor_other": self.floor_other_entry.get().strip(),
             "section": self.section_var.get(),
-            "device_type": self.device_var.get()
         }
 
         try:
@@ -436,5 +417,4 @@ class AcknowledgmentFormFrame(ttk.Frame):
         self.floor_var.set("")
         self.floor_other_entry.delete(0, tk.END)
         self.section_var.set("")
-        self.device_var.set("Office")
         self.status_label.config(text="")
