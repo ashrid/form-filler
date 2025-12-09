@@ -38,6 +38,7 @@ class AcknowledgmentPDFGenerator:
         self.margin = 0.6 * inch
         self.bottom_margin = 0.5 * inch
         self.sig_field_rect = None  # Will store signature field coordinates
+        self.device_radio_rects = []  # Will store device type radio button coordinates
 
     def _generate_filename(self, form_data: dict) -> str:
         """Generate filename in format: {emp ID} - {name} - acknowledgement form {asset name}.pdf"""
@@ -103,7 +104,7 @@ class AcknowledgmentPDFGenerator:
         return filepath
 
     def _add_signature_field(self, pdf_buffer: io.BytesIO, output_path: str):
-        """Add a proper digital signature field to the PDF"""
+        """Add digital signature field and interactive radio buttons to the PDF"""
         reader = PdfReader(pdf_buffer)
         writer = PdfWriter()
 
@@ -111,8 +112,68 @@ class AcknowledgmentPDFGenerator:
         for page in reader.pages:
             writer.add_page(page)
 
-        # Get the last page (where signature is)
+        # Get the last page (where signature and device selection are)
         last_page = writer.pages[-1]
+
+        # Ensure annotations array exists
+        if "/Annots" not in last_page:
+            last_page[NameObject("/Annots")] = ArrayObject()
+
+        # Create AcroForm if it doesn't exist
+        if "/AcroForm" not in writer._root_object:
+            acro_form = DictionaryObject()
+            acro_form.update({
+                NameObject("/Fields"): ArrayObject(),
+                NameObject("/SigFlags"): NumberObject(3),  # SignaturesExist | AppendOnly
+            })
+            writer._root_object[NameObject("/AcroForm")] = acro_form
+
+        # Add Device Type radio button group
+        if self.device_radio_rects:
+            # Create radio button group parent field
+            radio_group = DictionaryObject()
+            radio_group.update({
+                NameObject("/FT"): NameObject("/Btn"),
+                NameObject("/Ff"): NumberObject(49152),  # Radio button flags
+                NameObject("/T"): TextStringObject("DeviceType"),
+                NameObject("/Kids"): ArrayObject(),
+            })
+            radio_group_ref = writer._add_object(radio_group)
+
+            # Create individual radio button widgets
+            for radio_info in self.device_radio_rects:
+                x = radio_info["x"]
+                y = radio_info["y"]
+                size = radio_info["size"]
+                name = radio_info["name"]
+
+                radio_widget = DictionaryObject()
+                radio_widget.update({
+                    NameObject("/Type"): NameObject("/Annot"),
+                    NameObject("/Subtype"): NameObject("/Widget"),
+                    NameObject("/Rect"): ArrayObject([
+                        NumberObject(int(x)),
+                        NumberObject(int(y)),
+                        NumberObject(int(x + size)),
+                        NumberObject(int(y + size))
+                    ]),
+                    NameObject("/F"): NumberObject(4),  # Print flag
+                    NameObject("/P"): last_page.indirect_reference,
+                    NameObject("/Parent"): radio_group_ref,
+                    NameObject("/AS"): NameObject("/Off"),
+                    NameObject("/AP"): DictionaryObject({
+                        NameObject("/N"): DictionaryObject({
+                            NameObject(f"/{name}"): NameObject("/Off"),
+                        })
+                    }),
+                })
+
+                widget_ref = writer._add_object(radio_widget)
+                last_page["/Annots"].append(widget_ref)
+                radio_group["/Kids"].append(widget_ref)
+
+            # Add radio group to AcroForm
+            writer._root_object["/AcroForm"]["/Fields"].append(radio_group_ref)
 
         # Create signature field annotation
         if self.sig_field_rect:
@@ -135,22 +196,9 @@ class AcknowledgmentPDFGenerator:
                 NameObject("/P"): last_page.indirect_reference,
             })
 
-            # Add annotation to page
-            if "/Annots" not in last_page:
-                last_page[NameObject("/Annots")] = ArrayObject()
-
             # Add the signature field to annotations
             sig_field_ref = writer._add_object(sig_field)
             last_page["/Annots"].append(sig_field_ref)
-
-            # Create AcroForm if it doesn't exist
-            if "/AcroForm" not in writer._root_object:
-                acro_form = DictionaryObject()
-                acro_form.update({
-                    NameObject("/Fields"): ArrayObject(),
-                    NameObject("/SigFlags"): NumberObject(3),  # SignaturesExist | AppendOnly
-                })
-                writer._root_object[NameObject("/AcroForm")] = acro_form
 
             # Add field to AcroForm
             writer._root_object["/AcroForm"]["/Fields"].append(sig_field_ref)
@@ -460,16 +508,30 @@ class AcknowledgmentPDFGenerator:
         return y - 0.12 * inch
 
     def _draw_device_selection(self, c: canvas.Canvas, y: float, data: dict) -> float:
-        """Draw device type selection"""
+        """Draw device type selection with interactive radio buttons"""
         c.setFont("Helvetica-BoldOblique", 9)
         c.setFillColor(BLACK)
         c.drawString(self.margin, y, "Please select one of the following:")
 
         y -= 0.28 * inch
-        device_type = data.get("device_type", "")
 
-        # Office device
-        self._draw_radio(c, self.margin + 0.15 * inch, y, device_type == "Office")
+        # Clear previous radio rects
+        self.device_radio_rects = []
+
+        # Office device - draw empty circle placeholder (will be interactive field)
+        radio_x = self.margin + 0.15 * inch
+        radio_y = y
+        c.setStrokeColor(BLACK)
+        c.circle(radio_x + 0.08 * inch, radio_y + 0.04 * inch, 0.065 * inch)
+
+        # Store coordinates for Office radio button
+        self.device_radio_rects.append({
+            "name": "Office",
+            "x": radio_x,
+            "y": radio_y - 0.03 * inch,
+            "size": 0.18 * inch
+        })
+
         c.setFont("Helvetica-Bold", 9)
         c.drawString(self.margin + 0.4 * inch, y, "Office Device")
         y -= 0.18 * inch
@@ -499,8 +561,20 @@ class AcknowledgmentPDFGenerator:
 
         y -= 0.12 * inch
 
-        # Lab device
-        self._draw_radio(c, self.margin + 0.15 * inch, y, device_type == "Lab")
+        # Lab device - draw empty circle placeholder (will be interactive field)
+        radio_x = self.margin + 0.15 * inch
+        radio_y = y
+        c.setStrokeColor(BLACK)
+        c.circle(radio_x + 0.08 * inch, radio_y + 0.04 * inch, 0.065 * inch)
+
+        # Store coordinates for Lab radio button
+        self.device_radio_rects.append({
+            "name": "Lab",
+            "x": radio_x,
+            "y": radio_y - 0.03 * inch,
+            "size": 0.18 * inch
+        })
+
         c.setFont("Helvetica-Bold", 9)
         c.drawString(self.margin + 0.4 * inch, y, "Lab Device")
         y -= 0.18 * inch
