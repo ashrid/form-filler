@@ -1,0 +1,34 @@
+Digital ID overview
+Last updated on Dec 4, 2025
+Learn about using Digital IDs to sign and encrypt PDF documents in Adobe Acrobat.
+
+A digital ID is your unique digital signature for secure authentication in Acrobat. It allows you to securely sign documents, prove your identity, and protect sensitive information in your PDFs. Digital IDs have two main components:
+
+    A private key that applies your signature to documents
+    A public key that validates your signature for others
+
+Together, these components provide a secure method for verifying your identity in Acrobat workflows.
+Types of digital IDs
+
+Acrobat supports two types of digital IDs:
+
+    Self-signed Digital IDs: You create these digital IDs within Acrobat. You can set them up quickly, and they work well for personal or internal business purposes. Self-signed IDs provide a suitable option when you need to start using digital signatures immediately or for less formal situations.
+    Certificate Authority (CA) Digital IDs: Trusted third-party organizations known as Certificate Authorities issue these digital IDs. They provide a higher level of identity verification because the authority confirms your identity before issuing the ID. Government agencies and regulated industries often require CA-issued digital IDs for official or legal transactions.
+
+Digital ID usage
+
+Acrobat requires using digital IDs for the following tasks:
+
+    E-signing documents, such as contracts and legal papers
+    Certify that no one has altered a PDF
+    Sending confidential PDFs that only specific people should access
+    Proving your identity in official online transactions
+
+ 
+Key benefits
+
+Digital IDs are more secure than standard e-signatures and provide additional benefits, such as:
+
+    Authentication and verification: Prove your identity and verify the integrity of documents
+    Compliance: Meet regulatory requirements
+    Convenience: Sign documents from any location and device
